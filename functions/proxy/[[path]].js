@@ -85,6 +85,12 @@ function filterResponseHeaders(upstreamHeaders) {
   return out;
 }
 
+function totalSizeFromContentRange(contentRange) {
+  if (!contentRange) return null;
+  const m = /\/(\d+)\s*$/.exec(contentRange);
+  return m ? m[1] : null;
+}
+
 export async function onRequest(context) {
   const { request } = context;
 
@@ -104,11 +110,23 @@ export async function onRequest(context) {
     return new Response("Not Found", { status: 404, headers: CORS_HEADERS });
   }
 
+  const headers = filterRequestHeaders(request.headers);
+  const clientWantsHead = request.method === "HEAD";
+
+  // Cloudflare may strip Content-Length when returning a null-body HEAD
+  // response. Probe upstream with a 1-byte ranged GET instead, then answer
+  // the client with HEAD semantics and an accurate Content-Length.
+  let upstreamMethod = request.method;
+  if (clientWantsHead && !headers.has("Range")) {
+    upstreamMethod = "GET";
+    headers.set("Range", "bytes=0-0");
+  }
+
   let upstreamResponse;
   try {
     upstreamResponse = await fetch(upstreamUrl, {
-      method: request.method,
-      headers: filterRequestHeaders(request.headers),
+      method: upstreamMethod,
+      headers,
       redirect: "follow",
     });
   } catch (err) {
@@ -118,26 +136,36 @@ export async function onRequest(context) {
     });
   }
 
-  const headers = filterResponseHeaders(upstreamResponse.headers);
+  const outHeaders = filterResponseHeaders(upstreamResponse.headers);
 
-  // Workers may drop Content-Length when reconstructing a HEAD response with a
-  // null body; re-assert length / range headers from the upstream response.
-  const contentLength = upstreamResponse.headers.get("Content-Length");
-  if (contentLength && !headers.has("Content-Length")) {
-    headers.set("Content-Length", contentLength);
-  }
-  const acceptRanges = upstreamResponse.headers.get("Accept-Ranges");
-  if (acceptRanges && !headers.has("Accept-Ranges")) {
-    headers.set("Accept-Ranges", acceptRanges);
-  }
-  const contentRange = upstreamResponse.headers.get("Content-Range");
-  if (contentRange && !headers.has("Content-Range")) {
-    headers.set("Content-Range", contentRange);
+  if (clientWantsHead) {
+    const total =
+      totalSizeFromContentRange(upstreamResponse.headers.get("Content-Range")) ||
+      upstreamResponse.headers.get("Content-Length");
+    if (total) outHeaders.set("Content-Length", total);
+    if (!outHeaders.has("Accept-Ranges")) outHeaders.set("Accept-Ranges", "bytes");
+    // Client asked for HEAD of the whole object, not a 206 partial.
+    outHeaders.delete("Content-Range");
+    // Drain/cancel upstream body so the subrequest is not held open.
+    try {
+      await upstreamResponse.body?.cancel();
+    } catch (_) {
+      /* ignore */
+    }
+    const status =
+      upstreamResponse.status === 206 || upstreamResponse.status === 200
+        ? 200
+        : upstreamResponse.status;
+    return new Response(null, {
+      status,
+      statusText: status === 200 ? "OK" : upstreamResponse.statusText,
+      headers: outHeaders,
+    });
   }
 
-  return new Response(request.method === "HEAD" ? null : upstreamResponse.body, {
+  return new Response(upstreamResponse.body, {
     status: upstreamResponse.status,
     statusText: upstreamResponse.statusText,
-    headers,
+    headers: outHeaders,
   });
 }
