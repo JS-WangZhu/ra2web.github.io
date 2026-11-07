@@ -118,9 +118,26 @@ export async function onRequest(context) {
     });
   }
 
-  return new Response(upstreamResponse.body, {
+  const headers = filterResponseHeaders(upstreamResponse.headers);
+
+  // Workers may drop Content-Length when reconstructing a HEAD response with a
+  // null body; re-assert length / range headers from the upstream response.
+  const contentLength = upstreamResponse.headers.get("Content-Length");
+  if (contentLength && !headers.has("Content-Length")) {
+    headers.set("Content-Length", contentLength);
+  }
+  const acceptRanges = upstreamResponse.headers.get("Accept-Ranges");
+  if (acceptRanges && !headers.has("Accept-Ranges")) {
+    headers.set("Accept-Ranges", acceptRanges);
+  }
+  const contentRange = upstreamResponse.headers.get("Content-Range");
+  if (contentRange && !headers.has("Content-Range")) {
+    headers.set("Content-Range", contentRange);
+  }
+
+  return new Response(request.method === "HEAD" ? null : upstreamResponse.body, {
     status: upstreamResponse.status,
     statusText: upstreamResponse.statusText,
-    headers: filterResponseHeaders(upstreamResponse.headers),
+    headers,
   });
 }
