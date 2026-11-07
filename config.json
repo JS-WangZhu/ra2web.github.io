@@ -2,15 +2,24 @@
   "serversUrl": "servers.json",
   "discordUrl": "https://qm.qq.com/q/8wt3F0yUbm",
   "autoLoadGameRes": true,
-  "gameresBaseUrl": "//res2.wangerhuoda.cn/",
-  "gameresBaseUrls": ["//wyhjres2.bun.sh.cn/","//werhd.k0s.cn/"],
-  "campaignBaseUrl": "//res2.wangerhuoda.cn/campaign/",
-  "campaignBaseUrls": ["//wyhjres2.bun.sh.cn/campaign/","//werhd.k0s.cn/campaign/"],
-  "mapsBaseUrl": "//gmap.wangerhuoda.cn/map/",
-  "modsBaseUrl": "//gmap.wangerhuoda.cn/mod/",
-  "musicBaseUrl": "https://stdres.wangerhuoda.cn/music/",
-  "musicBaseUrls": ["//wyhjres2.bun.sh.cn/music/","//werhd.k0s.cn/music/"],
-  "gameResArchiveUrl": "https://download.ra2web.com/full-pack.7z",
+  "gameresBaseUrl": "/proxy/res2/",
+  "gameresBaseUrls": [
+    "/proxy/wyhjres2/",
+    "/proxy/werhd/"
+  ],
+  "campaignBaseUrl": "/proxy/res2/campaign/",
+  "campaignBaseUrls": [
+    "/proxy/wyhjres2/campaign/",
+    "/proxy/werhd/campaign/"
+  ],
+  "mapsBaseUrl": "/proxy/gmap/map/",
+  "modsBaseUrl": "/proxy/gmap/mod/",
+  "musicBaseUrl": "/proxy/stdres/music/",
+  "musicBaseUrls": [
+    "/proxy/wyhjres2/music/",
+    "/proxy/werhd/music/"
+  ],
+  "gameResArchiveUrl": "/proxy/download/full-pack.7z",
   "ladderRulesUrl": "//www.ra2web.com/ladder-rules.html",
   "modSdkUrl": "https://github.com/ra2web/mod-sdk",
   "donateUrl": "",
@@ -31,7 +40,9 @@
   },
   "p2pCdnEnabled": false,
   "p2pCdnTrackerUrl": "wss://gserv.gz.wangerhuoda.cn:38443/p2p-cdn",
-  "p2pCdnIceServers": ["stun:gserv.gz.wangerhuoda.cn:3478"],
+  "p2pCdnIceServers": [
+    "stun:gserv.gz.wangerhuoda.cn:3478"
+  ],
   "sentry": {
     "dsn": "https://268e10e6b2c60224fa86d0910a033a6f@sentry.wangerhuoda.cn/1",
     "incidentUrl": "https://telemetry.bj1.wangerhuoda.cn/client-incidents",
